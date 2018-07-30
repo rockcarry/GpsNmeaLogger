@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GpsNmeaLogger</string>
+    <string name="btn_start_log">start log nmea</string>
+    <string name="btn_stop_log">stop log nmea</string>
+    <string name="btn_gps_reset">gps reset</string>
+    <string name="btn_cancel">cancel</string>
+    <string name="btn_confirm">confirm</string>
+    <string name="start_gps_log_title">gps nmea</string>
+    <string name="start_gps_log_message">Do you want to record gps nmea log ?</string>
+    <string name="toast_stop_catch_log">catching gps nmea log stoped !</string>
+</resources>
