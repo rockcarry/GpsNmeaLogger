@@ -36,7 +36,7 @@ public class GpsService extends Service
         mLocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
-        mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+        mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, TAG);
         mWakeLock.setReferenceCounted(false);
     }
 
@@ -68,9 +68,7 @@ public class GpsService extends Service
         mLocManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 1, mLocationListener);
         mLocManager.addNmeaListener(mNmeaListener);
         mLogFile = file;
-        if (!mWakeLock.isHeld()) {
-            mWakeLock.acquire();
-        }
+        mWakeLock.acquire();
     }
 
     public void stopGpsLog() {
