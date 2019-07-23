@@ -113,10 +113,12 @@ public class GpsService extends Service
             Log.d(TAG, nmea);
             if (mLogFile != null) {
                 writeFile(mLogFile, nmea);
-                Message msg = new Message();
-                msg.what = GpsNmeaLoggerActivity.MSG_NMEA_STRING;
-                msg.obj  = new String(nmea);
-                mHandler.sendMessage(msg);
+                if (mHandler != null) {
+                    Message msg = new Message();
+                    msg.what = GpsNmeaLoggerActivity.MSG_NMEA_STRING;
+                    msg.obj  = new String(nmea);
+                    mHandler.sendMessage(msg);
+                }
             }
         }
     };
