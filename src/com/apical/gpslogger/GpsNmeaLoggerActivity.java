@@ -8,10 +8,14 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.ServiceConnection;
 import android.graphics.Typeface;
 import android.os.IBinder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.view.View;
@@ -20,6 +24,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 import android.util.Log;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -27,13 +32,13 @@ public class GpsNmeaLoggerActivity extends Activity
     implements View.OnClickListener
 {
     private static final String TAG = "NmeaLoggerActivity";
-
-    private Button   mBtnStartLog;
-    private Button   mBtnStopLog;
-    private Button   mBtnGpsReset;
-    private EditText mEditGpsNmea;
-
+    private static final String NMEA_LOG_DIR = Environment.getExternalStorageDirectory() + File.separator + "nmea";
+    private Button     mBtnStartLog;
+    private Button     mBtnStopLog;
+    private Button     mBtnGpsReset;
+    private EditText   mEditGpsNmea;
     private GpsService mGpsServ = null;
+
     private ServiceConnection mGpsServiceConn = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder serv) {
@@ -69,6 +74,23 @@ public class GpsNmeaLoggerActivity extends Activity
 
         // bind record service
         bindService(i, mGpsServiceConn, Context.BIND_AUTO_CREATE);
+
+        try {
+            PackageInfo packageInfo = getPackageManager().getPackageInfo(
+                  getApplicationInfo().packageName, PackageManager.GET_PERMISSIONS);
+
+            if (packageInfo.requestedPermissions != null) {
+                for (String permission : packageInfo.requestedPermissions) {
+                    Log.v(TAG, "Checking permissions for: " + permission);
+                    if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(packageInfo.requestedPermissions, 1);
+                        return;
+                    }
+                }
+            }
+        } catch (NameNotFoundException e) {
+            Log.e(TAG, "Unable to load package's permissions", e);
+        }
     }
 
     @Override
@@ -108,9 +130,11 @@ public class GpsNmeaLoggerActivity extends Activity
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         mEditGpsNmea.setText("");
+                        File dir = new File(NMEA_LOG_DIR);
+                        if (!dir.exists()) dir.mkdir();
                         Date date = new Date(System.currentTimeMillis());
                         SimpleDateFormat df = new SimpleDateFormat("'nmea'_yyyyMMdd_HHmmss");
-                        String file = "/mnt/sdcard/" + df.format(date) + ".log";
+                        String file = NMEA_LOG_DIR + File.separator + df.format(date) + ".log";
                         mGpsServ.startGpsLog(file);
                         Toast.makeText(GpsNmeaLoggerActivity.this, file, Toast.LENGTH_LONG).show();
                     }
@@ -140,11 +164,8 @@ public class GpsNmeaLoggerActivity extends Activity
             switch (msg.what) {
             case MSG_NMEA_STRING:
                 {
-                    String str = mEditGpsNmea.getText().toString();
-                    if (str.length() > 2 * 1024 * 1024) {
-                        str = str.substring(0, 1 * 1024 * 1024);
-                    }
-                    str = (String)msg.obj + str;
+                    String str = (String)msg.obj + mEditGpsNmea.getText().toString();
+                    if (str.length() > 2 * 1024) str = str.substring(0, 1 * 1024);
                     mEditGpsNmea.setText(str);
                 }
                 break;
@@ -152,7 +173,4 @@ public class GpsNmeaLoggerActivity extends Activity
         }
     };
 }
-
-
-
 

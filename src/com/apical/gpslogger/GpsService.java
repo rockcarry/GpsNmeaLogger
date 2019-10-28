@@ -1,5 +1,8 @@
 package com.apical.gpslogger;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -28,7 +31,6 @@ public class GpsService extends Service
     private String          mLogFile    = null;
     private PowerManager.WakeLock mWakeLock;
 
-
     @Override
     public void onCreate() {
         Log.d(TAG, "onCreate");
@@ -43,6 +45,7 @@ public class GpsService extends Service
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
+        stopGpsLog();
     }
 
     @Override
@@ -65,13 +68,15 @@ public class GpsService extends Service
     }
 
     public void startGpsLog(String file) {
+        mWakeLock.acquire();
         mLocManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 1, mLocationListener);
         mLocManager.addNmeaListener(mNmeaListener);
         mLogFile = file;
-        mWakeLock.acquire();
+        showNotification(this, true, getString(R.string.nmea_is_recording));
     }
 
     public void stopGpsLog() {
+        showNotification(this, false, null);
         mLocManager.removeUpdates(mLocationListener);
         mLocManager.removeNmeaListener(mNmeaListener);
         mLogFile = null;
@@ -110,15 +115,13 @@ public class GpsService extends Service
     GpsStatus.NmeaListener mNmeaListener = new GpsStatus.NmeaListener() {
         @Override
         public void onNmeaReceived(long timestamp, String nmea) {
-            Log.d(TAG, nmea);
+//          Log.d(TAG, nmea);
             if (mLogFile != null) {
                 writeFile(mLogFile, nmea);
-                if (mHandler != null) {
-                    Message msg = new Message();
-                    msg.what = GpsNmeaLoggerActivity.MSG_NMEA_STRING;
-                    msg.obj  = new String(nmea);
-                    mHandler.sendMessage(msg);
-                }
+                Message msg = new Message();
+                msg.what = GpsNmeaLoggerActivity.MSG_NMEA_STRING;
+                msg.obj  = new String(nmea);
+                mHandler.sendMessage(msg);
             }
         }
     };
@@ -136,6 +139,22 @@ public class GpsService extends Service
                     writer.close();
                 }
             } catch (IOException e) { e.printStackTrace(); }
+        }
+    }
+
+    private static final int NOTIFICATION_ID = 1;
+    private static Notification        mNotification = new Notification();
+    private static NotificationManager mNotifyManager= null;
+    private static void showNotification(Context context, boolean show, String msg) {
+        if (mNotifyManager == null) mNotifyManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (show) {
+            PendingIntent pi    = PendingIntent.getActivity(context, 0, new Intent(context, GpsNmeaLoggerActivity.class), 0);
+            mNotification.flags = Notification.FLAG_ONGOING_EVENT;
+            mNotification.icon  = R.drawable.ic_launcher;
+            mNotification.setLatestEventInfo(context, context.getResources().getString(R.string.app_name), msg, pi);
+            mNotifyManager.notify(NOTIFICATION_ID, mNotification);
+        } else {
+            mNotifyManager.cancel(NOTIFICATION_ID);
         }
     }
 }
